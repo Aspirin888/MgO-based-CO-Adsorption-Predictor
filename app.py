@@ -33,7 +33,7 @@ feature_labels = {
 
 # 根据您提供的映射表，创建编码到原始值的映射
 dopant_encoding_mapping = {
-    0: '0 (No dopant)',
+    0: 'No dopant',
     1: '0.005K',
     2: '0.005Li',
     3: '0.005Na',
@@ -348,6 +348,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
