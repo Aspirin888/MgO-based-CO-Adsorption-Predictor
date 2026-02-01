@@ -1,3 +1,5 @@
+[file name]: app_optimized_correct.py
+[file content begin]
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -25,14 +27,62 @@ feature_labels = {
     'Vpore (cm3/g)': 'V$_{pore}$ (cm³/g)',
     'dpore (nm)': 'd$_{pore}$ (nm)',
     'Particle size (nm)': 'Particle size (nm)',
-    'Dopant or modifier': 'Doped-modified',
+    'Dopant or modifier': 'Dopant or modifier',
     'Pressure (Mpa)': 'Pressure (MPa)',
     'temputure ': 'Temperature (°C)',
     'time (min)': 'Time (min)',
     'Morphology': 'Morphology'
 }
 
-# 形态选项映射到原始特征名
+# 根据您提供的映射表，创建编码到原始值的映射
+# 注意：这里编码是键，原始值是值（反向映射）
+dopant_encoding_mapping = {
+    0: '0 (No dopant)',
+    1: '0.005K',
+    2: '0.005Li',
+    3: '0.005Na',
+    4: '0.01MC',
+    5: '0.02Fe-AMS',
+    6: '0.05Mn',
+    7: '0.09(0.18Li0.3Na0.52K)NO3',
+    8: '0.09(0.18Li0.52Na0.3K)NO3',
+    9: '0.09(0.3Li0.18Na0.52K)NO3',
+    10: '0.09(0.3Li0.52Na0.18K)NO3',
+    11: '0.09(0.52Li0.18Na0.3K)NO3',
+    12: '0.09(0.52Li0.3Na0.18K)NO3',
+    13: '0.11MC',
+    14: '0.14g SDS',
+    15: '0.15Mn',
+    16: '0.15Na-k',
+    17: '0.18g CTAB',
+    18: '0.1Fe-AMS',
+    19: '0.1MC',
+    20: '0.1Mn',
+    21: '0.2Fe-AMS',
+    22: '0.33Al2O3',
+    23: '0.33CeO2',
+    24: '0.4Fe-AMS',
+    25: '0.5(0.375Li0.075Na0.55K)-0.15(NaK)',
+    26: '0.66g Tween-60',
+    27: '0.6Fe-AMS',
+    28: '0.8Fe-AMS',
+    29: '10.21C',
+    30: '10.58C',
+    31: '9.66C',
+    32: 'AMS',
+    33: 'APTES',
+    34: 'CTAB',
+    35: 'DETA',
+    36: 'P-123',
+    37: 'PEI',
+    38: 'PVP',
+    39: 'SDS'
+}
+
+# 为了用户选择方便，也创建原始值到编码的映射
+dopant_original_to_encoding = {v: k for k, v in dopant_encoding_mapping.items()}
+
+# 形态选项映射到原始特征名（根据训练数据）
 morphology_mapping = {
     'Block': 'Morphology_Block',
     'Flake': 'Morphology_Flake',
@@ -41,8 +91,18 @@ morphology_mapping = {
     'Rod-shaped': 'Morphology_Rod-shaped',
     'Cube': 'Morphology_cube',
     'Nest-like': 'Morphology_nestlike',
-    'Sphere': 'Morphology_sphere'
+    'Sphere': 'Morphology_sphere',
+    'Other (Morphology_0)': 'Morphology_0'  # 根据数据可能存在的其他形态
 }
+
+# 模型需要的特征顺序（必须与训练时完全一致）
+feature_order = [
+    'SBET (m2/g)', 'Vpore (cm3/g)', 'dpore (nm)', 'Particle size (nm)',
+    'Dopant or modifier', 'Pressure (Mpa)', 'temputure ', 'time (min)',
+    'Morphology_0', 'Morphology_Block', 'Morphology_Flake', 'Morphology_Flower-like',
+    'Morphology_Granular', 'Morphology_Rod-shaped', 'Morphology_cube',
+    'Morphology_nestlike', 'Morphology_sphere'
+]
 
 # 应用标题
 st.title("🌿 MgO-based CO₂ Adsorption Capacity Predictor")
@@ -63,19 +123,21 @@ with st.sidebar:
     - **Algorithm**: CatBoost Regressor
     - **Target**: CO₂ adsorption capacity (mmol/g)
     - **Features**: Material properties and experimental conditions
+    - **Dataset**: 1,700+ experimental data points
+    """)
+    
+    st.header("Dopant/Modifier Info")
+    st.markdown("""
+    The **Dopant or modifier** field shows the original chemical notation.
+    Internally, it uses the exact encoding (0-39) from the training data.
     """)
     
     st.header("Morphology Options")
     st.markdown("""
     Available morphology types:
-    - Block
-    - Flake
-    - Flower-like
-    - Granular
-    - Rod-shaped
-    - Cube
-    - Nest-like
-    - Sphere
+    - Block, Flake, Flower-like, Granular
+    - Rod-shaped, Cube, Nest-like, Sphere
+    - Other (Morphology_0): For unspecified morphologies
     """)
 
 # 主内容区域 - 分为两列
@@ -107,35 +169,42 @@ with col1:
         time_min = st.number_input(feature_labels['time (min)'], min_value=0.0, max_value=300.0, value=60.0, step=10.0,
                                   help="Time in minutes")
         
-        # 掺杂/修饰选择
-        dopant_options = {'No': 0, 'Yes': 1}
-        dopant = st.selectbox(feature_labels['Dopant or modifier'], options=list(dopant_options.keys()),
-                             help="Whether the material is doped or modified")
-        dopant_value = dopant_options[dopant]
+        # 掺杂/修饰选择 - 显示原始化学式，内部使用编码
+        st.subheader("Dopant/Modifier")
+        dopant_options = list(dopant_encoding_mapping.values())
+        selected_dopant = st.selectbox(
+            feature_labels['Dopant or modifier'], 
+            options=dopant_options,
+            index=0,  # 默认选择"No dopant"
+            help="Select the dopant/modifier (original chemical notation)"
+        )
+        dopant_encoded_value = dopant_original_to_encoding[selected_dopant]
     
     with subcol3:
         st.subheader("Morphology")
         
-        # 形态选择 - 合并为一个特征
+        # 形态选择 - 使用精确的独热编码
         morphology_options = list(morphology_mapping.keys())
         selected_morphology = st.selectbox(
             feature_labels['Morphology'], 
             options=morphology_options,
-            help="Select one morphology type from: " + ", ".join(morphology_options)
+            index=1,  # 默认选择Block（根据数据中最常见）
+            help="Select one morphology type"
         )
         
         # 显示形态提示
         with st.expander("ℹ️ Morphology Information"):
             st.markdown("""
-            **Available Morphology Types:**
+            **Morphology Types (One-hot encoded):**
             - **Block**: Regular block-shaped particles
-            - **Flake**: Thin, flat plate-like structures
-            - **Flower-like**: Complex flower-like hierarchical structures
+            - **Flake**: Thin, flat plate-like structures  
+            - **Flower-like**: Complex hierarchical structures
             - **Granular**: Irregular granular particles
             - **Rod-shaped**: Elongated rod-like structures
             - **Cube**: Cubic-shaped particles
             - **Nest-like**: Nest-like porous structures
             - **Sphere**: Spherical particles
+            - **Other**: Unspecified morphology (Morphology_0)
             """)
 
 with col2:
@@ -145,28 +214,28 @@ with col2:
     morphology_features = {morphology_mapping[morph]: 0 for morph in morphology_options}
     morphology_features[morphology_mapping[selected_morphology]] = 1
     
-    # 创建特征字典
+    # 创建特征字典 - 严格按照训练时的特征顺序
     input_features = {
         'SBET (m2/g)': sbet,
         'Vpore (cm3/g)': vpore,
         'dpore (nm)': dpore,
         'Particle size (nm)': particle_size,
-        'Dopant or modifier': dopant_value,
+        'Dopant or modifier': dopant_encoded_value,  # 使用标签编码值
         'Pressure (Mpa)': pressure,
         'temputure ': temperature,
         'time (min)': time_min,
-        **morphology_features
+        'Morphology_0': morphology_features['Morphology_0'],
+        'Morphology_Block': morphology_features['Morphology_Block'],
+        'Morphology_Flake': morphology_features['Morphology_Flake'],
+        'Morphology_Flower-like': morphology_features['Morphology_Flower-like'],
+        'Morphology_Granular': morphology_features['Morphology_Granular'],
+        'Morphology_Rod-shaped': morphology_features['Morphology_Rod-shaped'],
+        'Morphology_cube': morphology_features['Morphology_cube'],
+        'Morphology_nestlike': morphology_features['Morphology_nestlike'],
+        'Morphology_sphere': morphology_features['Morphology_sphere']
     }
     
-    # 转换为DataFrame
-    feature_order = [
-        'SBET (m2/g)', 'Vpore (cm3/g)', 'dpore (nm)', 'Particle size (nm)',
-        'Dopant or modifier', 'Pressure (Mpa)', 'temputure ', 'time (min)',
-        'Morphology_Block', 'Morphology_Flake', 'Morphology_Flower-like',
-        'Morphology_Granular', 'Morphology_Rod-shaped', 'Morphology_cube',
-        'Morphology_nestlike', 'Morphology_sphere'
-    ]
-    
+    # 转换为DataFrame，确保特征顺序与训练时一致
     input_df = pd.DataFrame([input_features])[feature_order]
     
     # 预测按钮
@@ -178,26 +247,37 @@ with col2:
             # 显示结果
             st.metric(
                 label="Predicted CO₂ Adsorption Capacity",
-                value=f"{prediction:.2f} mmol/g",
+                value=f"{prediction:.3f} mmol/g",
                 delta=None
             )
             
             # 结果解释
-            st.success(f"The predicted CO₂ adsorption capacity is **{prediction:.2f} mmol/g**")
+            st.success(f"The predicted CO₂ adsorption capacity is **{prediction:.3f} mmol/g**")
             
-            # 可视化条
-            max_capacity = 10.0  # 可根据您的数据范围调整
+            # 可视化条 - 根据数据集范围调整
+            max_capacity = 5.0  # 根据数据集中的最大值调整
             percentage = min((prediction / max_capacity) * 100, 100)
             
-            st.progress(int(percentage)/100, text=f"Capacity: {prediction:.2f} mmol/g")
+            st.progress(int(percentage)/100, text=f"Capacity: {prediction:.3f} mmol/g ({percentage:.1f}% of max)")
             
             # 显示输入特征值（用于调试或确认）
-            with st.expander("View Input Features"):
+            with st.expander("🔍 View Model Input Details"):
+                st.markdown("**Feature values sent to model:**")
                 st.dataframe(input_df, use_container_width=True)
+                
+                # 显示编码信息
+                st.markdown("**Encoding information:**")
+                encoding_info = {
+                    'Dopant/Modifier': f"'{selected_dopant}' → {dopant_encoded_value}",
+                    'Morphology': f"'{selected_morphology}' → {morphology_mapping[selected_morphology]} = 1"
+                }
+                st.json(encoding_info)
             
+        except FileNotFoundError:
+            st.error("Model file 'CatBoost.pkl' not found. Please ensure it's in the same directory as this app.")
         except Exception as e:
             st.error(f"Error in prediction: {str(e)}")
-            st.info("Please ensure the CatBoost.pkl model file is in the same directory as this app.")
+            st.info("Please check the input parameters and try again.")
     
     # 输入特征摘要
     st.header("📝 Input Summary")
@@ -207,7 +287,7 @@ with col2:
             feature_labels['Vpore (cm3/g)'],
             feature_labels['dpore (nm)'],
             feature_labels['Particle size (nm)'],
-            feature_labels['Dopant or modifier'],
+            'Dopant/modifier',
             feature_labels['Pressure (Mpa)'],
             feature_labels['temputure '],
             feature_labels['time (min)'],
@@ -218,7 +298,7 @@ with col2:
             f"{vpore} cm³/g", 
             f"{dpore} nm",
             f"{particle_size} nm",
-            dopant,
+            f"{selected_dopant} (encoded: {dopant_encoded_value})",
             f"{pressure} MPa",
             f"{temperature} °C",
             f"{time_min} min",
@@ -231,25 +311,96 @@ with col2:
 # 底部信息
 st.markdown("---")
 st.markdown(
-    "**Note**: This prediction is based on a machine learning model trained on experimental data. "
-    "Results should be validated with laboratory experiments."
+    """
+    ### 📋 Model and Data Information
+    
+    **Training Data:**
+    - **Size**: 1,700+ experimental data points
+    - **Dopant/Modifier Encoding**: Label encoding (0-39) used in training
+      - 0: No dopant/modifier
+      - 1-39: Specific chemical dopants/modifiers
+    - **Morphology Encoding**: One-hot encoding (9 categories)
+    
+    **Important Notes:**
+    1. The model uses **exact feature encodings** from the training data
+    2. **Dopant/Modifier** values are internally converted to labels 0-39
+    3. **Morphology** uses one-hot encoding (only one type can be selected)
+    4. All predictions should be **validated experimentally**
+    
+    **Model Performance:**
+    - Algorithm: CatBoost Regressor
+    - Features: 16 material and experimental parameters
+    - Target: CO₂ adsorption capacity (mmol/g)
+    """
 )
 
-# 响应式设计
+# 响应式设计和样式
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #1f77b4;
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        font-weight: bold;
+        padding: 10px 24px;
+        border-radius: 8px;
+        border: none;
     }
-    .metric-container {
-        background-color: #f0f2f6;
+    
+    .stButton>button:hover {
+        background-color: #45a049;
+    }
+    
+    .stMetric {
+        background-color: #f8f9fa;
         padding: 20px;
         border-radius: 10px;
+        border-left: 5px solid #4CAF50;
     }
-    .stExpander {
-        border: 1px solid #e6e6e6;
+    
+    .success-box {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 12px;
         border-radius: 5px;
+        border: 1px solid #c3e6cb;
+        margin: 10px 0;
+    }
+    
+    .info-box {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        padding: 12px;
+        border-radius: 5px;
+        border: 1px solid #bee5eb;
+        margin: 10px 0;
     }
 </style>
 """, unsafe_allow_html=True)
+
+# 添加重要提示
+st.markdown("""
+<div class="info-box">
+<strong>💡 Important for Accurate Predictions:</strong>
+<ul>
+<li>Use the <strong>exact same encoding scheme</strong> as in training data</li>
+<li>Dopant values are converted to <strong>labels 0-39</strong></li>
+<li>All 9 morphology columns are included (one-hot encoded)</li>
+<li>Feature order must match training data exactly</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+
+# 添加性能说明
+st.markdown("""
+<div class="info-box">
+<strong>📈 Model Performance Note:</strong><br>
+This CatBoost model was trained on experimental CO₂ adsorption data.
+The prediction accuracy depends on:
+<ul>
+<li>Similarity of input parameters to training data range</li>
+<li>Correctness of feature encoding</li>
+<li>Quality and representativeness of training data</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+[file content end]
