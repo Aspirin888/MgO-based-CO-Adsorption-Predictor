@@ -116,7 +116,7 @@ with st.sidebar:
     
     st.header("Model Info")
     st.markdown("""
-    - **Algorithm**: CatBoost Regressor
+    - **Algorithm**: ETFM model
     - **Target**: CO₂ adsorption capacity (mmol/g)
     - **Features**: Material properties and experimental conditions
   
@@ -348,5 +348,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
