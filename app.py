@@ -109,7 +109,7 @@ with st.sidebar:
     st.header("About")
     st.markdown("""
     This app predicts the **CO₂ uptake capacity** of magnesium oxide-based adsorbents 
-    using a trained CatBoost regression model.
+    using a trained ETFM model.
     
     Adjust the parameters in the main panel and get instant predictions!
     """)
@@ -119,7 +119,7 @@ with st.sidebar:
     - **Algorithm**: CatBoost Regressor
     - **Target**: CO₂ adsorption capacity (mmol/g)
     - **Features**: Material properties and experimental conditions
-    - **Dataset**: 1,700+ experimental data points
+  
     """)
     
     st.header("Dopant/Modifier Info")
@@ -133,7 +133,7 @@ with st.sidebar:
     Available morphology types:
     - Block, Flake, Flower-like, Granular
     - Rod-shaped, Cube, Nest-like, Sphere
-    - Other (Morphology_0): For unspecified morphologies
+    - Other: For unspecified morphologies
     """)
 
 # 主内容区域 - 分为两列
@@ -200,7 +200,7 @@ with col1:
             - **Cube**: Cubic-shaped particles
             - **Nest-like**: Nest-like porous structures
             - **Sphere**: Spherical particles
-            - **Other**: Unspecified morphology (Morphology_0)
+            - **Other**: Unspecified morphology
             """)
 
 with col2:
@@ -308,18 +308,10 @@ with col2:
 st.markdown("---")
 st.markdown(
     """
-    ### 📋 Model and Data Information
-    
-    **Training Data:**
-    - **Size**: 1,700+ experimental data points
-    - **Dopant/Modifier Encoding**: Label encoding (0-39) used in training
-    - **Morphology Encoding**: One-hot encoding (9 categories)
-    
-    **Important Notes:**
+    ### 📋 **Important Notes:**
     1. The model uses **exact feature encodings** from the training data
     2. **Dopant/Modifier** values are internally converted to labels 0-39
     3. **Morphology** uses one-hot encoding
-    4. All predictions should be **validated experimentally**
     """
 )
 
@@ -357,15 +349,4 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 添加重要提示
-st.markdown("""
-<div class="info-box">
-<strong>💡 Important for Accurate Predictions:</strong>
-<ul>
-<li>Use the <strong>exact same encoding scheme</strong> as in training data</li>
-<li>Dopant values are converted to <strong>labels 0-39</strong></li>
-<li>All 9 morphology columns are included (one-hot encoded)</li>
-<li>Feature order must match training data exactly</li>
-</ul>
-</div>
-""", unsafe_allow_html=True)
+
