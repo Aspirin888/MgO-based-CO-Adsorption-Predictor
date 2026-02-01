@@ -125,7 +125,6 @@ with st.sidebar:
     st.header("Dopant/Modifier Info")
     st.markdown("""
     The **Dopant or modifier** field shows the original chemical notation.
-    Internally, it uses the exact encoding (0-39) from the training data.
     """)
     
     st.header("Morphology Options")
@@ -348,6 +347,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
