@@ -1,5 +1,3 @@
-[file name]: app_optimized_correct.py
-[file content begin]
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -404,3 +402,4 @@ The prediction accuracy depends on:
 </div>
 """, unsafe_allow_html=True)
 [file content end]
+
