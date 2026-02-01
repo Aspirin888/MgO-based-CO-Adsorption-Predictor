@@ -146,22 +146,22 @@ with col1:
     
     with subcol1:
         st.subheader("Physical Properties")
-        sbet = st.number_input(feature_labels['SBET (m2/g)'], min_value=0.0, max_value=1000.0, value=150.0, step=10.0, 
+        sbet = st.number_input(feature_labels['SBET (m2/g)'], min_value=50.0, max_value=500.0, value=100.0, step=10.0, 
                               help="Specific surface area in m²/g")
-        vpore = st.number_input(feature_labels['Vpore (cm3/g)'], min_value=0.0, max_value=5.0, value=0.5, step=0.1,
+        vpore = st.number_input(feature_labels['Vpore (cm3/g)'], min_value=0.1, max_value=1.0, value=0.2, step=0.1,
                                help="Pore volume in cm³/g")
-        dpore = st.number_input(feature_labels['dpore (nm)'], min_value=0.0, max_value=50.0, value=10.0, step=1.0,
+        dpore = st.number_input(feature_labels['dpore (nm)'], min_value=5.0, max_value=60.0, value=10.0, step=1.0,
                                help="Pore diameter in nm")
-        particle_size = st.number_input(feature_labels['Particle size (nm)'], min_value=0.0, max_value=500.0, value=50.0, step=10.0,
+        particle_size = st.number_input(feature_labels['Particle size (nm)'], min_value=10.0, max_value=8000.0, value=50.0, step=10.0,
                                        help="Particle size in nm")
     
     with subcol2:
         st.subheader("Experimental Conditions")
-        pressure = st.number_input(feature_labels['Pressure (Mpa)'], min_value=0.0, max_value=10.0, value=1.0, step=0.1,
+        pressure = st.number_input(feature_labels['Pressure (Mpa)'], min_value=0.05, max_value=1.20, value=0.1, step=0.02,
                                   help="Pressure in MPa")
-        temperature = st.number_input(feature_labels['temputure '], min_value=0.0, max_value=500.0, value=25.0, step=5.0,
+        temperature = st.number_input(feature_labels['temputure '], min_value=25.0, max_value=500.0, value=25.0, step=5.0,
                                      help="Temperature in °C")
-        time_min = st.number_input(feature_labels['time (min)'], min_value=0.0, max_value=300.0, value=60.0, step=10.0,
+        time_min = st.number_input(feature_labels['time (min)'], min_value=0.0, max_value=350.0, value=300.0, step=10.0,
                                   help="Time in minutes")
         
         # 掺杂/修饰选择
@@ -347,6 +347,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
